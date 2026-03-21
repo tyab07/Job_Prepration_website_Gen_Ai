@@ -1,5 +1,7 @@
 import User from "../models/user.model.js ";
 import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+
 export const registerUser = async function (req, res) {
     try {
         if(!req.body.userName || !req.body.email || !req.body.password) {
@@ -24,10 +26,37 @@ export const registerUser = async function (req, res) {
         const user = new User({ userName, email, password: hashedPassword });
         await user.save();
 
-        const token = new jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+        const token = jwt.sign({ id: user._id, userName: user.userName }, process.env.JWT_SECRET, { expiresIn: '1d' });
+        res.cookie('token', token, { httpOnly: true, secure:true });
 
         res.status(201).json({ user, token });
 
+    } catch (error) {
+        res.status(400).json({ message: error.message });
+    }
+};
+
+export const loginUser = async function (req, res) {
+    try {
+        if(!req.body.email || !req.body.password) {
+            return res.status(400).json({ message: "All fields are required" });
+        }
+
+        const user = await User.findOne({ email: req.body.email });
+
+        if(!user) {
+            return res.status(400).json({ message: "Invalid email or password" });
+        }
+        
+        const isPasswordValid = await bcrypt.compare(req.body.password, user.password); 
+        if(!isPasswordValid) { 
+            return res.status(400).json({ message: "Invalid email or password" });
+        }
+
+        const token =jwt.sign({ id: user._id, userName: user.userName }, process.env.JWT_SECRET, { expiresIn: '1d' });
+        res.cookie('token', token, { httpOnly: true, secure:true });
+
+        res.status(200).json({ message: "Login successful", user, token });
     } catch (error) {
         res.status(400).json({ message: error.message });
     }
