@@ -50,7 +50,7 @@ export const loginUser = async function (req, res) {
         
         const isPasswordValid = await bcrypt.compare(req.body.password, user.password); 
         if(!isPasswordValid) { 
-            return res.status(400).json({ message: "Invalid email or password" });
+            return res.status(400).json({ message: "Invalid email or password Try Again" });
         }
 
         const token =jwt.sign({ id: user._id, userName: user.userName }, process.env.JWT_SECRET, { expiresIn: '1d' });
